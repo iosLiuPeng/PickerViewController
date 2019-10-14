@@ -15,6 +15,7 @@
 @property (strong, nonatomic) IBOutlet UIButton *btnOk;
 
 @property (nonatomic, strong) NSMutableArray<NSArray *> *arrDataSource;///< 数据源
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *arrSelectIndex;///< 选择的序号
 @property (nonatomic, strong) NSDateComponents *todayComp;
 
 @property (strong, nonatomic) IBOutlet NSLayoutConstraint *lytContentY;
@@ -48,14 +49,17 @@ static NSInteger maxYears = 100;
 - (void)dataConfig
 {
     _arrDataSource = [[NSMutableArray alloc] init];
+    _arrSelectIndex = [[NSMutableArray alloc] init];
     _todayComp = [[NSCalendar currentCalendar] components:(NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay) fromDate:[NSDate date]];
     
     // 初始化数据源
     switch (_type) {
         case PickerViewType_OrderTime: {
             NSMutableArray *muarr = [[NSMutableArray alloc] init];
+            [muarr addObject:@"全部"];
+            
             for (NSInteger i = _todayComp.year; i >= 2019 ; i--) {
-                [muarr addObject:[NSString stringWithFormat:@"%ld", i]];
+                [muarr addObject:[NSString stringWithFormat:@"%ld", (long)i]];
             }
             [_arrDataSource addObject:[muarr copy]];
             
@@ -66,7 +70,7 @@ static NSInteger maxYears = 100;
         case PickerViewType_Age: {
             NSMutableArray *muarr = [NSMutableArray arrayWithCapacity:maxYears];
             for (NSInteger i = maxYears; i > 0; i--) {
-                [muarr addObject:[NSString stringWithFormat:@"%ld", i]];
+                [muarr addObject:[NSString stringWithFormat:@"%ld", (long)i]];
             }
             [_arrDataSource addObject:[muarr copy]];
         }
@@ -88,7 +92,7 @@ static NSInteger maxYears = 100;
         if (index == NSNotFound) {
             switch (_type) {
                 case PickerViewType_OrderTime: {
-                    index = i == 0? 0: 11;
+                    index = 0;
                 }
                     break;
                 case PickerViewType_Age: {
@@ -100,10 +104,13 @@ static NSInteger maxYears = 100;
             }
         }
         
-        [_pickerView selectRow:index inComponent:i animated:NO];
+        [_arrSelectIndex addObject:@(index)];
     }
     
-    [_pickerView reloadAllComponents];
+    for (NSInteger i = 0; i < _arrSelectIndex.count; i++) {
+        NSInteger index = [_arrSelectIndex[i] integerValue];
+        [_pickerView selectRow:index inComponent:i animated:NO];
+    }
 }
 
 #pragma mark - Private
@@ -148,7 +155,7 @@ static NSInteger maxYears = 100;
     NSString *title = arrTitle[row];
     
     // 选中字体颜色
-    NSInteger selectIndex = [_pickerView selectedRowInComponent:component];
+    NSInteger selectIndex = [_arrSelectIndex[component] integerValue];
     UIColor *color = selectIndex == row? [UIColor colorWithRed:26/255.0 green:123/255.0 blue:255/255.0 alpha:1]: [UIColor blackColor];
     
     UILabel *label = nil;
@@ -168,6 +175,7 @@ static NSInteger maxYears = 100;
 
 - (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component
 {
+    [_arrSelectIndex replaceObjectAtIndex:component withObject:@(row)];
     [pickerView reloadAllComponents];
 }
 
@@ -179,6 +187,10 @@ static NSInteger maxYears = 100;
 
 - (NSInteger)pickerView:(UIPickerView *)pickerView numberOfRowsInComponent:(NSInteger)component
 {
+    if (_type == PickerViewType_OrderTime && component == 1 && [_arrSelectIndex.firstObject integerValue] == 0) {
+        return 0;
+    }
+    
     NSArray *arrTitle = _arrDataSource[component];
     return arrTitle.count;
 }
@@ -229,11 +241,17 @@ static NSInteger maxYears = 100;
 - (IBAction)confirm:(id)sender {
     NSMutableArray *arrValue = [[NSMutableArray alloc] init];
     
-    for (NSInteger i = 0; i < _arrDataSource.count; i++) {
-        NSArray *arrTitle = _arrDataSource[i];
-        NSInteger selectIndex = [_pickerView selectedRowInComponent:i];
-        NSString *value = arrTitle[selectIndex];
-        [arrValue addObject:value];
+    if (_type == PickerViewType_OrderTime && [_arrSelectIndex.firstObject integerValue] == 0) {
+        // 选择全部
+        arrValue = nil;
+    } else {
+        // 其他普通选择
+        for (NSInteger i = 0; i < _arrDataSource.count; i++) {
+            NSArray *arrTitle = _arrDataSource[i];
+            NSInteger selectIndex = [_arrSelectIndex[i] integerValue];
+            NSString *value = arrTitle[selectIndex];
+            [arrValue addObject:value];
+        }
     }
     
     __weak typeof(self) weakSelf = self;
