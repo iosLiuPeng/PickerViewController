@@ -19,9 +19,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) PickerViewType type;
 
 /* 传入的 */
-@property (nonatomic, copy) NSArray<NSString *> *values;
+@property (nonatomic, copy) NSArray<NSString *> * _Nullable values;
 // 回调
-@property (nonatomic, copy) void(^selectBlock)(NSArray<NSString *> *values);
+@property (nonatomic, copy) void(^selectBlock)(NSArray<NSString *> * _Nullable values);
 @end
 
 NS_ASSUME_NONNULL_END
